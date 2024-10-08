@@ -1,6 +1,10 @@
 # encoding: utf-8
 require "logstash/outputs/base"
 require "logstash/namespace"
+require "time"
+require "json"
+require 'aws-sdk-kinesis'
+
 
 # An example output that does nothing.
 class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
@@ -69,11 +73,57 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
     raise "Required file " + file +" does not exist." unless File.file?(file)
   end
 
+  AWSIOTCreds = Struct.new(:accessKeyId, :secretAccessKey, :sessionToken, :expiration)
+  def getIotAccess
+    uri = URI(@iot_endpoint)
+  
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.cert = OpenSSL::X509::Certificate.new(File.read(@cert_file))
+    http.key = OpenSSL::PKey::RSA.new(File.read(@key_file))
+    http.ca_file = @ca_cert_file
+    http.verify_mode = @verify_certificate ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE  
+
+    request = Net::HTTP::Get.new(uri)
+    request['x-amzn-iot-thingname'] = @iot_name
+
+    response = http.request(request)
+    result = JSON.parse(response.body)["credentials"]
+    return AWSIOTCreds.new(result["accessKeyId"], result["secretAccessKey"], result["sessionToken"],
+                           Time.parse(result["expiration"]))
+  end
+  
+  def init_aws
+    Aws.config.update({
+      region: @region,
+      credentials: Aws::Credentials.new(@creds.accessKeyId, @creds.secretAccessKey, @creds.sessionToken)
+    })
+
+    # Initialize Kinesis client
+    @kinesis = Aws::Kinesis::Client.new
+      # send data to kinesis
+    response = @kinesis.put_record({
+      stream_name: @stream_name,
+      data: '{"test":"test"}',
+      partition_key: 'test'
+    })
+    @logger.info("Record sent successfully. Shard ID: #{response.shard_id}, Sequence number: #{response.sequence_number}")
+
+  end
+
+  def renew_aws
+    @creds = getIotAccess()
+    Aws.config.update({ credentials: Aws::Credentials.new(@creds.accessKeyId, @creds.secretAccessKey, @creds.sessionToken)})
+  end
+
+
   public
   def register
     check_required_file(@cert_file)
     check_required_file(@key_file)
     check_required_file(@ca_cert_file)
+    @creds = getIotAccess()
+    init_aws()
     @logger.error("Kinesis_IOT PLugin is empty")
   end # def register
 
