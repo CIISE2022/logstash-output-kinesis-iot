@@ -9,6 +9,7 @@ require 'aws-sdk-kinesis'
 # An example output that does nothing.
 class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
   config_name "kinesis-iot"
+  default :codec, 'json'
   # The name of the stream to send data to.
   config :stream_name, :validate => :string, :required => true
   # A list of event data keys to use when constructing a partition key
@@ -98,7 +99,6 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
       region: @region,
       credentials: Aws::Credentials.new(@creds.accessKeyId, @creds.secretAccessKey, @creds.sessionToken)
     })
-
     # Initialize Kinesis client
     @kinesis = Aws::Kinesis::Client.new
       # send data to kinesis
@@ -108,9 +108,7 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
       partition_key: 'test'
     })
     @logger.info("Record sent successfully. Shard ID: #{response.shard_id}, Sequence number: #{response.sequence_number}")
-
   end
-
   def renew_aws
     @creds = getIotAccess()
     Aws.config.update({ credentials: Aws::Credentials.new(@creds.accessKeyId, @creds.secretAccessKey, @creds.sessionToken)})
@@ -124,11 +122,53 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
     check_required_file(@ca_cert_file)
     @creds = getIotAccess()
     init_aws()
+    @codec.on_event(&method(:send_record))
     @logger.error("Kinesis_IOT PLugin is empty")
   end # def register
 
   public
   def receive(event)
-    return "Event received"
-  end # def event
+    return unless output?(event)
+
+    if @randomized_partition_key
+      event.set("[@metadata][partition_key]", SecureRandom.uuid)
+    else
+      # Haha - gawd. If I don't put an empty string in the array, then calling .join()
+      # on it later will result in a US-ASCII string if the array is empty. Ruby is awesome.
+      partition_key_parts = [""]
+
+      @event_partition_keys.each do |partition_key_name|
+        if not event.get(partition_key_name).nil? and event.get(partition_key_name).length > 0
+          partition_key_parts << event.get(partition_key_name).to_s
+          break
+        end
+      end
+
+      event.set("[@metadata][partition_key]", (partition_key_parts * "-").to_s[/.+/m] || "-")
+    end
+
+    begin
+      @codec.encode(event)
+    rescue => e
+      @logger.warn("Error encoding event", :exception => e, :event => event)
+    end
+  end
+  def send_record(event, payload)
+    begin
+      response = @kinesis.put_record({
+        stream_name: @stream_name,
+        data: payload,
+        partition_key: event.get("[@metadata][partition_key]")
+      })
+    rescue => e
+      @logger.warn("Error writing event to Kinesis", :exception => e)
+    end
+
+    num = @producer.getOutstandingRecordsCount()
+    # if num > @max_pending_records
+    #   @logger.warn("Kinesis is too busy - blocking until things have cleared up")
+    #   @producer.flushSync()
+    #   @logger.info("Okay - I've stopped blocking now")
+    # end
+  end
 end # class LogStash::Outputs::Example
