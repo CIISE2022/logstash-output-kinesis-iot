@@ -123,7 +123,6 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
     @creds = getIotAccess()
     init_aws()
     @codec.on_event(&method(:send_record))
-    @logger.error("Kinesis_IOT PLugin is empty")
   end # def register
 
   public
@@ -164,7 +163,7 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
       @logger.warn("Error writing event to Kinesis", :exception => e)
     end
 
-    num = @producer.getOutstandingRecordsCount()
+    # num = @producer.getOutstandingRecordsCount()
     # if num > @max_pending_records
     #   @logger.warn("Kinesis is too busy - blocking until things have cleared up")
     #   @producer.flushSync()
