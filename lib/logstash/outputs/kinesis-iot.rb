@@ -102,12 +102,6 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
     # Initialize Kinesis client
     @kinesis = Aws::Kinesis::Client.new
       # send data to kinesis
-    response = @kinesis.put_record({
-      stream_name: @stream_name,
-      data: '{"test":"test"}',
-      partition_key: 'test'
-    })
-    @logger.info("Record sent successfully. Shard ID: #{response.shard_id}, Sequence number: #{response.sequence_number}")
   end
   def renew_aws
     @creds = getIotAccess()
@@ -159,6 +153,7 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
         data: payload,
         partition_key: event.get("[@metadata][partition_key]")
       })
+      @logger.debug("Record sent successfully. Shard ID: #{response.shard_id}, Sequence number: #{response.sequence_number}")
     rescue => e
       @logger.warn("Error writing event to Kinesis", :exception => e)
     end

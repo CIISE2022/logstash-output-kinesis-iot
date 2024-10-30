@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'logstash-output-kinesis-iot'
-  s.version         = '0.1.0'
+  s.version         = '0.1.5'
   s.licenses = ['Apache-2.0']
   s.summary = "Sends data to a AWS kinesis,  "
   s.description     = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.email = "jeremy@frandon.net"
   s.homepage = "http://www.elastic.co/guide/en/logstash/current/index.html"
   s.require_paths = ["lib"]
-  s.platform = Gem::Platform::JAVA #if defined?(RUBY_ENGINE) && RUBY_ENGINE == 'jruby'
+  #s.platform = Gem::Platform::Java #if defined?(RUBY_ENGINE) && RUBY_ENGINE == 'jruby'
   # Files
   s.files = Dir['lib/**/*','spec/**/*','vendor/**/*','*.gemspec','*.md','CONTRIBUTORS','Gemfile','LICENSE','NOTICE.TXT']
    # Tests
@@ -22,5 +22,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency "logstash-core-plugin-api", ">= 1.60", "<= 2.99"
   s.add_development_dependency 'logstash-devutils'
   s.add_runtime_dependency "logstash-codec-json"
-  s.add_runtime_dependency "aws-sdk-kinesis"
+  s.add_runtime_dependency "aws-sdk-kinesis", "~> 1.70"
 end
