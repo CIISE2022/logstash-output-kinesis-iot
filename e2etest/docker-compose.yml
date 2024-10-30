@@ -1,0 +1,16 @@
+services:
+  logstash:
+    build: .
+    volumes:
+      - ./logstash-config:/usr/share/logstash/config
+      - ./logstash-pipeline:/usr/share/logstash/pipeline
+      - ./test_logs:/usr/share/logstash/logs
+      - ./thingcerts:/certs
+    environment:
+      LS_JAVA_OPTS: -Xmx512m -Xms512m
+      log.level: debug
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9600"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
