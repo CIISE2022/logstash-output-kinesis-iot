@@ -11,4 +11,6 @@ publish:
 	bundle exec rake publish_gem
 
 e2etest/logstash-output-kinesis-iot-latest.gem: logstash-output-kinesis-iot.gemspec 
-	gem build logstash-output-kinesis-iot.gemspec -o e2etest/logstash-output-kinesis-iot-latest.gem
+	rm logstash-output-kinesis-iot-*.gem || true
+	gem build logstash-output-kinesis-iot.gemspec 
+	mv logstash-output-kinesis-iot-*.gem e2etest/logstash-output-kinesis-iot-latest.gem
