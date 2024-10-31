@@ -105,12 +105,6 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
     @kinesis = Aws::Kinesis::Client.new
       # send data to kinesis
   end
-  def renew_aws
-    @logger.info("Renewing AWS Credentials")
-    @creds = getIotAccess()
-    Aws.config.update({ credentials: Aws::Credentials.new(@creds.accessKeyId, @creds.secretAccessKey, @creds.sessionToken)})
-    
-  end
 
 
   public
@@ -151,8 +145,15 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
     end
   end
   def send_record(event, payload)
+    if @creds.expiration >= Time.now() + 1
+      @logger.debug("Token still valid at " + (Time.now() +1 ).to_s)
+    else
+      @logger.debug("Invalid token, renewing")
+      @creds = getIotAccess()
+      init_aws()
+    end
     begin
-      renew_aws() unless @creds.expiration >= Time.now() + 1
+      init_aws() unless @creds.expiration >= Time.now() + 1
       response = @kinesis.put_record({
         stream_name: @stream_name,
         data: payload,

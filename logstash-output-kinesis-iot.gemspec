@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'logstash-output-kinesis-iot'
-  s.version         = '0.1.11'
+  s.version         = '0.1.13'
   s.licenses = ['Apache-2.0']
   s.summary = "Sends data to a AWS kinesis,  "
   s.description     = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
