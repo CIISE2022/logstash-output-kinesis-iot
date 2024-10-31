@@ -152,7 +152,7 @@ class LogStash::Outputs::KinesisIOT < LogStash::Outputs::Base
   end
   def send_record(event, payload)
     begin
-      renew_aws() unless @creds.expiration < Time.now() + 1
+      renew_aws() unless @creds.expiration >= Time.now() + 1
       response = @kinesis.put_record({
         stream_name: @stream_name,
         data: payload,
